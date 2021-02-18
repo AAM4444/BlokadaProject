@@ -16,6 +16,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,13 +31,14 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
+import timber.log.Timber;
+
 public class MainActivity extends AppCompatActivity {
 
-    public ArrayList<String> AppName, HashSum, PackageList;
-    public List<ApplicationInfo> AppList;
+    public ArrayList<String> appNameList, hashSumList, sourceDirList;
+    public List<ApplicationInfo> appList;
     private RecyclerView recyclerView;
     private RecyclerViewAdapter adapter;
-    private MainActivity mainActivity;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,78 +47,77 @@ public class MainActivity extends AppCompatActivity {
 
         recyclerView = findViewById(R.id.rv_main);
 
-        ActivityCompat.requestPermissions(MainActivity.this,
-                new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                1);
-
-        mainActivity = new MainActivity();
-        PackageList = new ArrayList<>();
-        AppList = mainActivity.getApplicationList(this);
-        AppName = new ArrayList<>();
-        HashSum = new ArrayList<>();
+        sourceDirList = new ArrayList<>();
+        appNameList = new ArrayList<>();
+        hashSumList = new ArrayList<>();
+        appList = getApplicationList(this);
 
         //fill PackageList
-        for (ApplicationInfo al : AppList) {
-            //ЗДЕСЬ ПОЛУЧАЮ ДИРЕКТОРИЮ МОИХ ФАЙЛОВ
+        for (ApplicationInfo al : appList) {
             String path = al.sourceDir;
-            PackageList.add(path);
+            sourceDirList.add(path);
         }
 
-//        //fill the array with null objects
-//        for (int i = 0; i < AppList.size(); i++) {
-//            AppName.add(null);
-//        }
-//
-//        //fill the array with null objects
-//        for (int i = 0; i < AppList.size(); i++) {
-//            HashSum.add(null);
-//        }
+        final Handler handler = new Handler();
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
 
-        //set Adapter with arrays full of null
+                //fill the array with null objects
+                for (int i = 0; i < appList.size(); i++) {
+                    hashSumList.add(null);
+                }
 
-        //fill AppName with applic's name
-        for (int i = 0; i < AppList.size(); i++) {
-//            String applicName = mainActivity.applicationLabel(this, AppList.get(i));
-//            AppName.add(applicName);
-        }
+                //fill the array with null objects
+                for (int i = 0; i < appList.size(); i++) {
+                    appNameList.add(null);
+                }
 
-        for (int i = 0; i < PackageList.size(); i++) {
-            final String path = PackageList.get(i);
-            String applicName = mainActivity.applicationLabel(this, AppList.get(i));
-            AppName.add(applicName);
-           Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        //set Adapter with arrays full of null
+                        recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+                        adapter = new RecyclerViewAdapter(appNameList, hashSumList, getApplicationContext());
+                        recyclerView.setAdapter(adapter);
+                        Timber.d("appNameList size before = %s", appNameList.size());
+                    }
+                });
+
+                for (int j = 0; j < sourceDirList.size(); j++) {
+                    final int i = j;
+                    String path = sourceDirList.get(i);
+                    String applicName = applicationLabel(getApplicationContext(), appList.get(i));
+                    appNameList.set(i, applicName);
+
                     File file = new File(path);
                     MessageDigest shaDigest = null;
-                    String shaChecksum = null;
+                    String shaChecksum;
                     try {
                         shaDigest = MessageDigest.getInstance("SHA-256");
-//                        Log.d("TAG", " " + shaDigest);
                     } catch (NoSuchAlgorithmException e) {
                         e.printStackTrace();
                     }
                     try {
                         shaChecksum = getFileChecksum(shaDigest, file);
-                        HashSum.add(shaChecksum);
+                        hashSumList.set(i, shaChecksum);
                     } catch (IOException e) {
                         e.printStackTrace();
-                        Log.d("TAG", " " + e);
                     }
+                    handler.post(new Runnable(){
+                        @Override
+                        public void run() {
+                            adapter.notifyItemChanged(i);
 
+                        }
+                    });
                 }
-            };
-           
-            Thread thread = new Thread(runnable);
-            thread.start();
-        }
+            }
+        };
 
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new RecyclerViewAdapter(AppName, HashSum, this);
-        recyclerView.setAdapter(adapter);
+        thread.start();
 
     }
-
 
     public String applicationLabel(Context context, ApplicationInfo info) {
         PackageManager p = context.getPackageManager();
@@ -152,24 +153,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return sb.toString();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case 1: {
-
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    Toast.makeText(MainActivity.this, "Permission was granted", Toast.LENGTH_LONG).show();
-
-                } else {
-
-                    Toast.makeText(MainActivity.this, "Permission denied to read your External storage", Toast.LENGTH_LONG).show();
-                }
-                return;
-            }
-        }
     }
 
 }

@@ -16,14 +16,13 @@ import java.util.ArrayList;
 
 public class RecyclerViewAdapter extends RecyclerView.Adapter <RecyclerViewAdapter.ViewHolder> {
 
-
-    private ArrayList<String> AppName;
-    private ArrayList<String> HashSum;
+    private ArrayList<String> appNameList;
+    private ArrayList<String> hashSumList;
     private Context mContext;
 
-    public RecyclerViewAdapter(ArrayList<String> AppName, ArrayList<String> HashSum, Context mContext) {
-        this.AppName = AppName;
-        this.HashSum = HashSum;
+    public RecyclerViewAdapter(ArrayList<String> appNameList, ArrayList<String> hashSumList, Context mContext) {
+        this.appNameList = appNameList;
+        this.hashSumList = hashSumList;
         this.mContext = mContext;
     }
 
@@ -37,14 +36,13 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter <RecyclerViewAdapt
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
 
-//        Log.d("TAG", " " + position);
-        holder.appName.setText("App = " + AppName.get(position));
-        holder.appHash.setText("Hash = " + HashSum.get(position));
+        holder.appName.setText("App = " + appNameList.get(position));
+        holder.appHash.setText("Hash = " + hashSumList.get(position));
     }
 
     @Override
     public int getItemCount() {
-        return AppName.size();
+        return appNameList.size();
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
